@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 )
 
 type problem struct {
@@ -20,9 +21,8 @@ func main() {
 	defer file.Close()
 	problems := extractProblems(file)
 
-	correct := takeQuiz(problems)
+	correct, incorrect := takeQuiz(problems)
 	total := len(problems)
-	incorrect := total - correct
 	printResults(total, correct, incorrect)
 }
 
@@ -48,13 +48,13 @@ func extractProblems(file *os.File) []problem {
 	for i, row := range data {
 		problems[i] = problem{
 			question: row[0],
-			answer:   row[1],
+			answer:   strings.TrimSpace(row[1]),
 		}
 	}
 	return problems
 }
 
-func takeQuiz(problems []problem) int {
+func takeQuiz(problems []problem) (int, int) {
 	correct := 0
 
 	for i, problem := range problems {
@@ -67,7 +67,8 @@ func takeQuiz(problems []problem) int {
 			correct++
 		}
 	}
-	return correct
+	incorrect := len(problems) - correct
+	return correct, incorrect
 }
 
 func printResults(total int, correct int, incorrect int) {
