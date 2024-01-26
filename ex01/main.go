@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 )
 
 type problem struct {
@@ -13,17 +14,30 @@ type problem struct {
 	answer   string
 }
 
+type result struct {
+	total     int
+	correct   int
+	incorrect int
+}
+
 func main() {
 	csvFilePath := flag.String("csv", "problems.csv", "a csv file in the format of 'problem'")
+	timeLimit := flag.Int("limit", 30, "time limit for quiz")
 	flag.Parse()
 
 	file := readFile(*csvFilePath)
 	defer file.Close()
 	problems := extractProblems(file)
 
-	correct, incorrect := takeQuiz(problems)
-	total := len(problems)
-	printResults(total, correct, incorrect)
+	resChan := make(chan result)
+	go takeQuiz(problems, resChan)
+
+	select {
+	case res := <-resChan:
+		printResults(res)
+	case <-time.After(time.Duration(*timeLimit) * time.Second):
+		fmt.Println("\n\nQuiz time has expired :(")
+	}
 }
 
 func errorChecker(err error) {
@@ -54,7 +68,7 @@ func extractProblems(file *os.File) []problem {
 	return problems
 }
 
-func takeQuiz(problems []problem) (int, int) {
+func takeQuiz(problems []problem, res chan result) {
 	correct := 0
 
 	for i, problem := range problems {
@@ -67,13 +81,19 @@ func takeQuiz(problems []problem) (int, int) {
 			correct++
 		}
 	}
-	incorrect := len(problems) - correct
-	return correct, incorrect
+
+	total := len(problems)
+	incorrect := total - correct
+	res <- result{
+		total:     total,
+		correct:   correct,
+		incorrect: incorrect,
+	}
 }
 
-func printResults(total int, correct int, incorrect int) {
+func printResults(res result) {
 	fmt.Println("\n<< RESULT >>")
-	fmt.Printf("Total: %d\n", total)
-	fmt.Printf("Correct: %d\n", correct)
-	fmt.Printf("Incorrect: %d\n", incorrect)
+	fmt.Printf("Total: %d\n", res.total)
+	fmt.Printf("Correct: %d\n", res.correct)
+	fmt.Printf("Incorrect: %d\n", res.incorrect)
 }
