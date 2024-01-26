@@ -53,11 +53,7 @@ func readFile(path string) *os.File {
 }
 
 func extractProblems(file *os.File) []problem {
-	reader := csv.NewReader(file)
-	reader.FieldsPerRecord = -1
-	data, err := reader.ReadAll()
-	errorChecker(err)
-
+	data := readCsvFile(file)
 	problems := make([]problem, len(data))
 	for i, row := range data {
 		problems[i] = problem{
@@ -66,6 +62,14 @@ func extractProblems(file *os.File) []problem {
 		}
 	}
 	return problems
+}
+
+func readCsvFile(file *os.File) [][]string {
+	reader := csv.NewReader(file)
+	reader.FieldsPerRecord = -1
+	data, err := reader.ReadAll()
+	errorChecker(err)
+	return data
 }
 
 func takeQuiz(problems []problem, res chan result) {
